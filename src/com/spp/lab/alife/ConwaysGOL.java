@@ -133,5 +133,12 @@ public class ConwaysGOL extends Activity {
         private void updateState(){
 
         }
+
+        private boolean determineState(int n, boolean current){
+            if ((n==2 && current)||n==3)
+                return true;
+            else
+                return false;
+        }
     }
 }
