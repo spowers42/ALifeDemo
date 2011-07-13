@@ -35,11 +35,13 @@ public class ConwaysGOL extends Activity {
         setContentView(lifeView);
     }
 
+    @Override
     protected void onResume(){
         super.onResume();
         lifeView.resume();
     }
 
+    @Override
     protected void onPause(){
         super.onPause();
         lifeView.pause();
@@ -52,11 +54,11 @@ public class ConwaysGOL extends Activity {
         volatile boolean running = false;
         Thread renderThread = null;
         SurfaceHolder holder;
-        int stepTime = 100; //the target time for each step of the simulation in ms
+        long stepTime = 100; //the target time for each step of the simulation in ms
         //the size of the board
         int xSize;
         int ySize;
-        int cellSize = 6;
+        int cellSize = 4;
 
         public LifeRenderView(Context context){
             super(context);
@@ -76,21 +78,25 @@ public class ConwaysGOL extends Activity {
                 if(!holder.getSurface().isValid()){
                     continue;
                 }
-
+                long start = System.currentTimeMillis();
                 Canvas canvas = holder.lockCanvas();
                 updateState();
                 updateBoard();
                 renderBoard(canvas);
                 holder.unlockCanvasAndPost(canvas);
+                long delta = System.currentTimeMillis()-start;
+                StringBuilder s = new StringBuilder();
+                s.append(delta);
+                Log.d("delta", s.toString());
                 try {
-                    Thread.sleep(stepTime);
+                    long sleepTime = stepTime-delta;
+                    if (sleepTime<0)
+                        sleepTime = 0;
+                    Thread.sleep(sleepTime);
                 } catch (InterruptedException e) {
                     e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
                 }
             }
-            //todo get start time
-            //todo get end time, and time delta
-            //todo sleep for target-delta
         }
 
         //handle the pause of the render thread because the activity is paused
@@ -158,9 +164,7 @@ public class ConwaysGOL extends Activity {
 
         private void updateBoard(){
             for (int y=0; y<ySize; y++){
-                for (int x=0; x<xSize; x++){
-                    board[y][x]=tempBoard[y][x];
-                }
+                System.arraycopy(tempBoard[y], 0, board[y], 0, xSize);
             }
         }
 
