@@ -3,10 +3,15 @@ package com.spp.lab.alife;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.text.format.Time;
+import android.util.Log;
 import android.view.*;
 
+import java.lang.reflect.Array;
 import java.util.Random;
 
 /**
@@ -47,11 +52,11 @@ public class ConwaysGOL extends Activity {
         volatile boolean running = false;
         Thread renderThread = null;
         SurfaceHolder holder;
-        int stepTime = 1000; //the target time for each step of the simulation in ms
+        int stepTime = 100; //the target time for each step of the simulation in ms
         //the size of the board
         int xSize;
         int ySize;
-        int cellSize = 4;
+        int cellSize = 6;
 
         public LifeRenderView(Context context){
             super(context);
@@ -73,12 +78,17 @@ public class ConwaysGOL extends Activity {
                 }
 
                 Canvas canvas = holder.lockCanvas();
+                updateState();
+                updateBoard();
                 renderBoard(canvas);
                 holder.unlockCanvasAndPost(canvas);
+                try {
+                    Thread.sleep(stepTime);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                }
             }
             //todo get start time
-            //todo update the temp board
-            //todo move temp to real board
             //todo get end time, and time delta
             //todo sleep for target-delta
         }
@@ -104,24 +114,40 @@ public class ConwaysGOL extends Activity {
             Display display = ((WindowManager) getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
             xSize = display.getWidth()/cellSize;
             ySize = display.getHeight()/cellSize;
-            board = new boolean[xSize][ySize];
-            tempBoard = new boolean[xSize][ySize];
+            board = new boolean[ySize][xSize];
+            tempBoard = new boolean[ySize][xSize];
 
             Random rand = new Random();
             for (int y=0; y<ySize; y++){
                 for (int x=0; x<xSize; x++){
-                    board[x][y] = rand.nextBoolean();
+                    board[y][x] = rand.nextInt() % 7 == 0;
                 }
             }
             running = runningState;
         }
 
+        private void initTest(){
+            xSize = 10;
+            ySize = 10;
+            board = new boolean[ySize][xSize];
+            tempBoard = new boolean[ySize][xSize];
+            for (int x=0; x<xSize; x++){
+                board[0][x] = x%2==0;
+            }
+            for (int y=1; y<ySize; y++){
+                for (int x=0; x<xSize; x++){
+                    board[y][x]= !board[y-1][x];
+                }
+            }
+        }
+
         private void renderBoard(Canvas canvas){
             Paint paint = new Paint();
             paint.setARGB(255, 0, 255, 0); paint.setStyle(Paint.Style.FILL);
+            canvas.drawColor(Color.BLACK);
             for (int y=0; y<ySize; y++){
                 for (int x=0; x<xSize; x++){
-                    if (board[x][y]){
+                    if (board[y][x]){
                         int xTMP = x*cellSize;
                         int yTMP = y*cellSize;
                         canvas.drawRect(xTMP, yTMP, xTMP+cellSize, yTMP+cellSize, paint);
@@ -130,15 +156,70 @@ public class ConwaysGOL extends Activity {
             }
         }
 
-        private void updateState(){
-
+        private void updateBoard(){
+            for (int y=0; y<ySize; y++){
+                for (int x=0; x<xSize; x++){
+                    board[y][x]=tempBoard[y][x];
+                }
+            }
         }
 
+        private void updateState(){
+            int tmpy[] = new int[2];
+            int tmpx[] = new int[2];
+            int neighbors;
+
+            for (int y=0; y<ySize; y++){
+                //get temporary values (wrap around to the other side at edge)
+                if (y - 1 < 0) {
+                    tmpy[0] = ySize - 1;
+                } else {
+                    tmpy[0] = y - 1;
+                }
+                if (y + 1 == ySize) {
+                    tmpy[1] = 0;
+                } else {
+                    tmpy[1] = y + 1;
+                }
+                for (int x=0; x<xSize; x++){
+                    if (x - 1 < 0) {
+                        tmpx[0] = xSize - 1;
+                    } else {
+                        tmpx[0] = x - 1;
+                    }
+                    if (x + 1 == xSize) {
+                        tmpx[1] = 0;
+                    } else {
+                        tmpx[1] = x + 1;
+                    }
+                     /*locations to check for living cells
+
+                       tmpx[0],tmpy[1] |   x,tmpy[1]   |   tmpx[1],tmpy[1]
+                    --------------------------------------------------------------------------
+                        tmpx[0],y      |   THIS CELL   |   tmpx[1],y
+                    --------------------------------------------------------------------------
+                       tmpx[0],tmpy[0] |   x,tmpy[0]   |   tmpx[1],tmpy[0]
+                    */
+
+                    //check all the neighboring cells for life...
+                    neighbors = 0;
+                    neighbors += board[tmpy[1]][tmpx[0]] ? 1:0;
+                    neighbors += board[tmpy[1]][x] ? 1:0;
+                    neighbors += board[tmpy[1]][tmpx[1]] ? 1:0;
+                    neighbors += board[y][tmpx[0]] ? 1:0;
+                    neighbors += board[y][tmpx[1]] ? 1:0;
+                    neighbors += board[tmpy[0]][tmpx[0]] ? 1:0;
+                    neighbors += board[tmpy[0]][x] ? 1:0;
+                    neighbors += board[tmpy[0]][tmpx[1]] ? 1:0;
+
+                    tempBoard[y][x] = determineState(neighbors, board[y][x]);
+                }
+            }
+        }
+
+
         private boolean determineState(int n, boolean current){
-            if ((n==2 && current)||n==3)
-                return true;
-            else
-                return false;
+            return ((n==2&&current)||n==3);
         }
     }
 }
