@@ -28,7 +28,7 @@ public class ConwaysGOL extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        //requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
         lifeView = new LifeRenderView(this);
@@ -47,6 +47,30 @@ public class ConwaysGOL extends Activity {
         lifeView.pause();
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu){
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.gol_menu, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item){
+        switch (item.getItemId()){
+            case(R.id.reset):
+                lifeView.initializeBoard();
+                return true;
+            case(R.id.pause):
+                lifeView.pause();
+                return true;
+            case(R.id.resume):
+                lifeView.resume();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
     //actual GOL implementation
     class LifeRenderView extends SurfaceView implements Runnable{
         boolean [][] board;
@@ -54,7 +78,7 @@ public class ConwaysGOL extends Activity {
         volatile boolean running = false;
         Thread renderThread = null;
         SurfaceHolder holder;
-        long stepTime = 100; //the target time for each step of the simulation in ms
+        long stepTime = 175; //the target time for each step of the simulation in ms
         //the size of the board
         int xSize;
         int ySize;
@@ -116,7 +140,8 @@ public class ConwaysGOL extends Activity {
         //the simulation is reset
         private void initializeBoard(){
             boolean runningState = running;
-            running = false;
+            if (runningState)
+                pause();
             Display display = ((WindowManager) getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
             xSize = display.getWidth()/cellSize;
             ySize = display.getHeight()/cellSize;
@@ -129,7 +154,8 @@ public class ConwaysGOL extends Activity {
                     board[y][x] = rand.nextInt() % 7 == 0;
                 }
             }
-            running = runningState;
+            if (runningState)
+                resume();
         }
 
         private void initTest(){
